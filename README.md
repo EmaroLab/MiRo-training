@@ -168,6 +168,7 @@ Click the picture below for demostration video.
 
 Each partecipant was asked to fill the [questionaire](http://bit.ly/MiroTrainingSurvey) in order to evaluate the interaction with the robot.
 ## Recommendations
+1 ) Once cloned the repository [ros_verbal_interaction_node](https://github.com/EmaroLab/ros_verbal_interaction_node), be sure to unsubscribe from the topic */text_to_speech*. We brutally modified the speech_web_interface.html file by publishing to an unusubscribed topic insted to */text_to_speech*. This to avoid the web interface to repeat what just said by the user.
 
 
 ## Acknowledgments
