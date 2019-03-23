@@ -2,6 +2,8 @@
 
 ################################################################
 
+from speech_interaction.msg import Speech2text
+
 import rospy
 from std_msgs.msg import String,Bool,Int32
 from sensor_msgs.msg import Image,CompressedImage,Range,Imu
@@ -33,15 +35,6 @@ class CommandRecognition():
     ## Constructor   
     def __init__(self):
 
-        ## Node rate
-        self.rate = rospy.get_param('rate',200)
-
-        #topic root
-        ## Allow to switch from real robot to simulation from launch file
-        self.robot_name = rospy.get_param ( '/robot_name', 'rob01')
-        topic_root = "/miro/" + self.robot_name
-        print "topic_root", topic_root
-
         ## Initialization of the enabling command
         self.activate = False
         ## Initialization of the string to evaluate
@@ -63,7 +56,7 @@ class CommandRecognition():
         self.q_kill = platform_control()
 
         ## Subscriber to the topic /speech_to_text a message of type String that cointains the vocal command converted in text
-        self.sub_speech_to_text = rospy.Subscriber('/speech_to_text', String, self.callback_receive_command,queue_size=1)
+        self.sub_speech_to_text = rospy.Subscriber('/speech_to_text', Speech2text, self.callback_receive_command,queue_size=1)
 
         #------------------ ADD SUBSCRIBERS TO NEW COMMANDS -------------------#
         ## Subscriber to the topic /miro_sleep a message of type platform_control that rapresents the action corresponting to the command "Sleep"
@@ -86,7 +79,7 @@ class CommandRecognition():
     ## Callback function that receive and save the user's voice command as text
     def callback_receive_command(self, text):
 
-        self.command = text.data
+        self.command = text.transcript
 
     #------------------ ADD CALLBACK FOR NEW COMMANDS -------------------#    
     ## Callback that receives the action to be executed when the vocal command is "Sleep"
@@ -120,6 +113,13 @@ class CommandRecognition():
     def callback_kill_action(self, kill):
 
         self.q_kill = kill
+        
+    ## Set the node spin rate based on ros parameter value (it can be update at run time)
+    def set_node_speen_rate(self):
+        ## Node rate
+        self.rate = rospy.get_param('rate',200)
+        r = rospy.Rate(self.rate)
+        return r
     
     ## Function that check the incoming commands and publish the corresponding action
     ## @n The command "Miro" brings the robot in a default configuration the first time is used. The variable activate is set to True and enables the evauation of the other commands.
@@ -134,7 +134,7 @@ class CommandRecognition():
         q = platform_control()
         q.eyelid_closure = 1.0
 
-        r = rospy.Rate(self.rate)
+        r = self.set_node_speen_rate()
         count_bad = 0
         count_miro = 0
         count_sleep = 0
@@ -142,7 +142,6 @@ class CommandRecognition():
         while not rospy.is_shutdown():
 
             #ACTIVATION COMMAND
-
             if self.command == "Miro" or self.command == " Miro" or self.command == "miro" or self.command == " miro":
                 count_miro = 0
                 count_miro = count_miro +1
@@ -220,9 +219,14 @@ class CommandRecognition():
                 self.pub_platform_control.publish(q)
 
             r.sleep()
-
+            r = self.set_node_speen_rate()
+            
 if __name__== '__main__':
 
     rospy.init_node('command_recognition')
+    #topic root
+    ## Allow to switch from real robot to simulation from launch file (it cannot be update at run time)
+    topic_root = "/miro/" + sys.argv[1]
+    print "topic_root", topic_root
     sb = CommandRecognition()
     sb.switching_commands()

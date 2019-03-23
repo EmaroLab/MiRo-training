@@ -58,7 +58,7 @@ class GoodMode():
         self.b4 = 0
 
         ## Subscriber to the topic /miro/rob01/platform/sensors a message of type platform_sensors that cointains the information about the capacitive sensors.
-        self.sub_sensors_touch = rospy.Subscriber('/miro/rob01/platform/sensors', platform_sensors, self.callback_touch,queue_size =1)
+        self.sub_sensors_touch = rospy.Subscriber(topic_root + '/platform/sensors', platform_sensors, self.callback_touch,queue_size =1)
         ## Publisher to the topic /miro_good a message of type platform_control which corresponds to the "Good" action.
         self.pub_platform_control = rospy.Publisher('/miro_good',platform_control,queue_size=0)
 
@@ -114,5 +114,6 @@ class GoodMode():
 
 if __name__== '__main__':
     rospy.init_node('good')
+    topic_root = "/miro/" + sys.argv[1]
     good = GoodMode()
     good.miro_good()
