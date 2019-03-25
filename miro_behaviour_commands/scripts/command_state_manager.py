@@ -67,6 +67,9 @@ class StateBase(smach.State):
             elif command == 'bad':
                 print("Triggering BAD")
                 return command
+            elif command == 'sleep':
+                print("Triggering SLEEP")
+                return command
             #else:
             #    print("Command not understood " + command)
         print("TIME_OUT")
@@ -78,7 +81,7 @@ class StateBase(smach.State):
 class Demo(StateBase):
     def __init__(self,listener):
         self.listener = listener #super(StateBase,self).__init__(listener)
-        smach.State.__init__(self, outcomes=['demo2demo','demo2good','demo2bad'])
+        smach.State.__init__(self, outcomes=['demo2demo','demo2good','demo2bad','demo2sleep'])
         
     def execute(self, userdata):
         rospy.loginfo('Executing state DEMO')
@@ -92,7 +95,7 @@ class Demo(StateBase):
 class Good(StateBase):
     def __init__(self,listener):
         self.listener = listener #super(StateBase,self).__init__(listener)
-        smach.State.__init__(self, outcomes=['good2demo','good2good','good2bad'])
+        smach.State.__init__(self, outcomes=['good2demo','good2good','good2bad','good2sleep'])
 
     def execute(self, userdata):
         rospy.loginfo('Executing state GOOD')
@@ -101,13 +104,12 @@ class Good(StateBase):
             return 'good2demo'
         else:
             return 'good2' + transition
-            
         
 # define state Bad
 class Bad(StateBase):
     def __init__(self,listener):
         self.listener = listener #super(StateBase,self).__init__(listener)
-        smach.State.__init__(self, outcomes=['bad2demo','bad2bad','bad2good'])
+        smach.State.__init__(self, outcomes=['bad2demo','bad2bad','bad2good','bad2sleep'])
 
     def execute(self, userdata):
         transition = self.switch_state();
@@ -115,6 +117,21 @@ class Bad(StateBase):
             return 'bad2demo'
         else:
             return 'bad2' + transition       
+
+# define state Sleep
+class Sleep(StateBase):
+    def __init__(self,listener):
+        self.listener = listener #super(StateBase,self).__init__(listener)
+        smach.State.__init__(self, outcomes=['sleep2demo','sleep2sleep','sleep2good','sleep2bad'])
+
+    def execute(self, userdata):
+        rospy.loginfo('Executing state SLEEP')
+        transition = self.switch_state();
+        if transition == "": # time out
+            return 'sleep2demo'
+        else:
+            return 'sleep2' + transition
+            
 
 # main
 listener = CommandListener()
@@ -127,9 +144,10 @@ def main():
     # Open the container
     with sm:
         # Add states to the container
-        smach.StateMachine.add('DEMO', Demo(listener), transitions={'demo2demo':'DEMO','demo2good':'GOOD','demo2bad':'BAD'})
-        smach.StateMachine.add('GOOD', Good(listener), transitions={'good2good':'GOOD','good2demo':'DEMO','good2bad':'BAD'})
-        smach.StateMachine.add('BAD', Bad(listener), transitions={'bad2bad':'BAD','bad2demo':'DEMO','bad2good':'GOOD'})        
+        smach.StateMachine.add('DEMO', Demo(listener), transitions={'demo2demo':'DEMO','demo2good':'GOOD','demo2bad':'BAD','demo2sleep':'SLEEP'})
+        smach.StateMachine.add('GOOD', Good(listener), transitions={'good2good':'GOOD','good2demo':'DEMO','good2bad':'BAD','good2sleep':'SLEEP'})
+        smach.StateMachine.add('BAD', Bad(listener), transitions={'bad2bad':'BAD','bad2demo':'DEMO','bad2good':'GOOD','bad2sleep':'SLEEP'})        
+	smach.StateMachine.add('SLEEP', Sleep(listener), transitions={'sleep2sleep':'SLEEP','sleep2demo':'DEMO','sleep2good':'GOOD','sleep2bad':'BAD'})        
     
     # Configuration to show the finite state machine with `rosrun smach_viewer smach_viewer.py `
     sis = smach_ros.IntrospectionServer('miro_state_command', sm, '/MIRO_STATES')
@@ -146,7 +164,7 @@ def signal_handler(sig, frame):
     try:
         sys.exit(0)
     except: 
-        print("I am going to close the programm, please wait a change of state!")
+        print("I am going to close the programm, please wait for a change of state!")
    
 
 if __name__ == '__main__':
