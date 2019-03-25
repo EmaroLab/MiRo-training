@@ -1,4 +1,4 @@
-# how to add a state, for example: **sleep**, in (https://github.com/EmaroLab/MiRo-training/blob/arch/miro_behaviour_commands/scripts/command_state_manager.py)[command_state_manager.py]
+# how to add a state, for example: **sleep**
 - Copy paste a state class and name it as `Sleep` (for an example see below, assuming the `Good` and `Bad` states already implemented).
 - Change `mach.State.__init__` to accept transitions as: `'sleep2demo','sleep2sleep','sleep2X¹','sleep2²', ...` where `X¹` and `Y²` goes for all the sates of the machine, excepts for `demo` and `sleep`.
 - In the function `execute` of the `Sleep` class set:
