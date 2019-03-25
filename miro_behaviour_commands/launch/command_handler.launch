@@ -1,0 +1,57 @@
+<launch>
+
+<!-- REAL ROBOT OR SIMULATION -->
+<arg name="ROBOT_NAME" value="rob01" /> <!--rob01 or sim01 />-->
+
+<!-- NODE RATE-->
+<param name = "rate" value="200" />
+
+<!-- BALL COLOR -->
+<!-- yellow hsv (min-max) 37-67 65-95 73-103-->
+<!-- red    hsv (min-max) 110-127 227-150 209-150 -->
+<arg name="h_limit_max" default="47" doc="The maximum allowed field value Hue" />
+<arg name="h_limit_min" default="51" doc="The minimum allowed field value Hue" />
+<arg name="s_limit_max" default="67" doc="The maximum allowed field value Saturation" />
+<arg name="s_limit_min" default="65" doc="The minimum allowed field value Saturation" />
+<arg name="v_limit_max" default="59" doc="The maximum allowed field value Value" />
+<arg name="v_limit_min" default="79" doc="The minimum allowed field value Value" />
+ 
+<!-- SPEECH RECOGNITION -->
+
+<include file="$(find speech_interaction)/launch/speech_back_example.launch"/>
+
+<!-- HANDLING COMMANDS -->
+
+<!-- <node name="command_activation" pkg="miro_behaviour_commands" type="command_activation.py" /> -->
+<node name="command_recognition" pkg="command_handler" type="command_recognition.py" output="screen" args="$(arg ROBOT_NAME)"/>
+
+<!-- ACTIONS -->
+<node name ="play" pkg="miro_behaviour_commands" type="play.py" /> 
+<node name ="sleep" pkg="miro_behaviour_commands" type="sleep.py" />
+<node name ="bad" pkg="miro_behaviour_commands" type="bad.py" />
+<node name ="good" pkg="miro_behaviour_commands" type="good.py" args="$(arg ROBOT_NAME)"/>
+<node name ="imu_data_map" pkg="miro_behaviour_commands" type="imu_data_map.py" />
+<node name ="gbb_miro" pkg="miro_behaviour_commands" type="gbb_miro.py" />
+<node name ="kill" pkg="miro_behaviour_commands" type="kill.py" />
+
+
+<!-- DOUBLE HOUGH CIRCLES -->
+<include ns="right" file="$(find opencv_apps)/launch/hough_circles.launch">
+	<arg name="image" value="/right/hsv_color_filter/image" />	
+</include>
+
+<include ns="left" file="$(find opencv_apps)/launch/hough_circles.launch">
+	<arg name="image" value="/left/hsv_color_filter/image" />	
+</include>
+
+
+<!-- DOUBLE HSV COLOR FILTER -->
+<include ns="right" file="$(find opencv_apps)/launch/hsv_color_filter.launch">
+	<arg name="image" value="/miro/$(arg ROBOT_NAME)/platform/camr" />	
+</include>
+
+<include ns="left" file="$(find opencv_apps)/launch/hsv_color_filter.launch">
+	<arg name="image" value="/miro/$(arg ROBOT_NAME)/platform/caml" />	
+</include>
+
+</launch>
