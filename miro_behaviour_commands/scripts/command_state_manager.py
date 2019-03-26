@@ -51,86 +51,195 @@ class CommandListener:
 # class extended by all the states below
 class StateBase(smach.State):
 
-    TIME_OUT = 10 # in seconds
-    
-#    def __init__(self,listener):
-#        self.listener = listener # defined in each derived class due to construction issues
+    TIME_OUT = 5 # seconds
+    CHECK_FREQ = 0.2 # seconds
+    REACTIVE = True # if FALSE it waits before to send command
+    DELAY_COMMAND = 2 # in seconds
+    TRANSITION_TO_FROM = '2' # as string from meaning 'to' in the transition anme
+  
+    # derived class must contain constants
+    # STATE_NAME
+    # EDGE_NAME (the name x (not capitalised))
 
-    def switch_state(self):      
+    def __init__(self,listener):
+#        self.edge_name = self.STATE_NAME.lower()  # the name x (not capitalised)
+        self.listener = listener 
+        smach.State.__init__(self, outcomes=self.get_outcomes())
+
+    # it must retyrb the transiction sub-name X for `self.transition_to + X`
+    def wat_and_transit(self):      
         now = time.time()
-        while( time.time() - now < self.TIME_OUT):
-            time.sleep(self.TIME_OUT/10) # checking frequency
-            command = self.listener.get_command()
-            if command == 'good':
-                print("Triggering GOOD")
-                return command
+        while( time.time() - now < self.TIME_OUT): # untill time out
+            time.sleep(self.CHECK_FREQ) # wait for saving computation resources
+            command = self.listener.get_command() # get the user command
+            if not self.REACTIVE: # if set wait before to apply command
+                time.sleep(self.DELAY_COMMAND)
+            # set transition for all the connected states
+            if command == 'good': 
+                return Good.EDGE_NAME
             elif command == 'bad':
-                print("Triggering BAD")
-                return command
+                return Bad.EDGE_NAME
             elif command == 'sleep':
-                print("Triggering SLEEP")
-                return command
+                return Sleep.EDGE_NAME
             #else:
             #    print("Command not understood " + command)
         print("TIME_OUT")
         return ""
-        
-        
+
+    # smach interface
+    def execute(self, userdata):
+        rospy.loginfo('Executing state ' + str(self.STATE_NAME))
+        self.start_command() # start behaviour to implement
+        user_command = self.wat_and_transit(); # check for user command or time out
+        transition = self.transition_to(Demo.EDGE_NAME) # initialise time out transition
+        if( user_command != ""):  # not time out
+            transition = self.transition_to(user_command) # set user transition
+        self.stop_command() # stop behaviour to implement
+        return transition
+
+
+    # the transition name fragment x2...
+    def transition_to(self,to_edge_name):
+        return  self.EDGE_NAME + self.TRANSITION_TO_FROM  + to_edge_name # e.g., x2edge_name
+
+    # the transition name fragment ...2x [NOT USED !!!]
+    def transition_from(self,from_edge_name): 
+        return from_edge_name + TRANSITION_TO_FROM + self.EDGE_NAME # e.g., edge_name2x
+
+    # required interfaces for the derived classes (executed when entering in a state)
+    def start_command(self):
+	print('Run command, to be implemented in derived classes')
+
+    def stop_command(self):
+	print('Stop command, to be implemented in derived classes')
+
+    # required interfaces for the derived classes (called on constructor, those should return constants) (called during machine building)
+    def get_outcomes(self):
+	print('Machine outcomes set-up, to be implemented in derived classes')
+
+    def get_transitions(self):
+	print('Machine transition set-up, to be implemented in derived classes')
 
 # define state Demo
 class Demo(StateBase):
-    def __init__(self,listener):
-        self.listener = listener #super(StateBase,self).__init__(listener)
-        smach.State.__init__(self, outcomes=['demo2demo','demo2good','demo2bad','demo2sleep'])
-        
-    def execute(self, userdata):
-        rospy.loginfo('Executing state DEMO')
-        transition = self.switch_state();
-        if transition == "": # time out
-            return 'demo2demo'
-        else:
-            return 'demo2' + transition
+    # const required from StateBase
+    STATE_NAME = 'DEMO'
+    EDGE_NAME = STATE_NAME.lower() # TODO disconnect from command 
+
+    # function required by the StateBase class interface (called during machine building)
+    def get_outcomes(self):
+        return [ self.transition_to( self.EDGE_NAME), # 'demo2demo'
+                 self.transition_to( Good.EDGE_NAME), # 'demo2good'
+                 self.transition_to( Bad.EDGE_NAME), # 'demo2bad'
+                 self.transition_to( Sleep.EDGE_NAME) # 'demo2sleep'
+               ]
+
+    # function required by the StateBase class interface (called during machine building)
+    def get_transitions(self):
+        return { self.transition_to( self.EDGE_NAME) : self.STATE_NAME, # 'demo2demo':'DEMO',
+                 self.transition_to( Good.EDGE_NAME) : Good.STATE_NAME, #'demo2good':'GOOD',
+                 self.transition_to( Bad.EDGE_NAME) : Bad.STATE_NAME, # 'demo2bad':'BAD',
+                 self.transition_to( Sleep.EDGE_NAME) : Sleep.STATE_NAME #'demo2sleep':'SLEEP' 
+               }
+
+    # function required by the StateBase class interface
+    def start_command(self):
+	print('Run command implementation DEEMO')
+
+    # function required by the StateBase class interface
+    def stop_command(self):
+	print('Stop command implementation DEEMO')
 
 # define state Good
 class Good(StateBase):
-    def __init__(self,listener):
-        self.listener = listener #super(StateBase,self).__init__(listener)
-        smach.State.__init__(self, outcomes=['good2demo','good2good','good2bad','good2sleep'])
+    # const required from StateBase
+    STATE_NAME = 'GOOD'
+    EDGE_NAME = STATE_NAME.lower() # TODO disconnect from command 
 
-    def execute(self, userdata):
-        rospy.loginfo('Executing state GOOD')
-        transition = self.switch_state();
-        if transition == "": # time out
-            return 'good2demo'
-        else:
-            return 'good2' + transition
+    # function required by the StateBase class interface (called during machine building)
+    def get_outcomes(self):
+        return [ self.transition_to( self.EDGE_NAME), # 'good2good'
+                 self.transition_to( Demo.EDGE_NAME), # 'good2demo'
+                 self.transition_to( Bad.EDGE_NAME), # 'good2bad'
+                 self.transition_to( Sleep.EDGE_NAME) # 'good2sleep'
+               ]
+
+    # function required by the StateBase class interface (called during machine building)
+    def get_transitions(self):
+        return { self.transition_to( self.EDGE_NAME) : self.STATE_NAME, # 'good2good':'GOOD',
+                 self.transition_to( Demo.EDGE_NAME) : Demo.STATE_NAME, #'good2demo':'DEMO',
+                 self.transition_to( Bad.EDGE_NAME) : Bad.STATE_NAME, # 'good2bad':'BAD',
+                 self.transition_to( Sleep.EDGE_NAME) : Sleep.STATE_NAME #'good2bad':'SLEEP' 
+               }
+
+    # function required by the StateBase class interface
+    def start_command(self):
+	print('Run command implementation GOOOD')
+
+    # function required by the StateBase class interface
+    def stop_command(self):
+	print('Stop command implementation GOOOD')
         
 # define state Bad
 class Bad(StateBase):
-    def __init__(self,listener):
-        self.listener = listener #super(StateBase,self).__init__(listener)
-        smach.State.__init__(self, outcomes=['bad2demo','bad2bad','bad2good','bad2sleep'])
+    # const required from StateBase
+    STATE_NAME = 'BAD'
+    EDGE_NAME = STATE_NAME.lower() # TODO disconnect from command 
 
-    def execute(self, userdata):
-        transition = self.switch_state();
-        if transition == "": # time out
-            return 'bad2demo'
-        else:
-            return 'bad2' + transition       
+    # function required by the StateBase class interface (called during machine building)
+    def get_outcomes(self):
+        return [ self.transition_to( self.EDGE_NAME), # 'bad2bad'
+                 self.transition_to( Demo.EDGE_NAME), # 'bad2demo'
+                 self.transition_to( Good.EDGE_NAME), # 'bad2good'
+                 self.transition_to( Sleep.EDGE_NAME) # 'bad2sleep'
+               ]
+
+    # function required by the StateBase class interface (called during machine building)
+    def get_transitions(self):
+        return { self.transition_to( self.EDGE_NAME) : self.STATE_NAME, # 'bad2bad':'BAD',
+                 self.transition_to( Demo.EDGE_NAME) : Demo.STATE_NAME, #'bad2demo':'DEMO',
+                 self.transition_to( Good.EDGE_NAME) : Good.STATE_NAME, # 'bad2good':'GOOD',
+                 self.transition_to( Sleep.EDGE_NAME) : Sleep.STATE_NAME #'bad2sleep':'SLEEP' 
+               }
+
+    # function required by the StateBase class interface
+    def start_command(self):
+	print('Run command implementation BAAD')
+
+    # function required by the StateBase class interface
+    def stop_command(self):
+	print('Stop command implementation BAAD') 
 
 # define state Sleep
 class Sleep(StateBase):
-    def __init__(self,listener):
-        self.listener = listener #super(StateBase,self).__init__(listener)
-        smach.State.__init__(self, outcomes=['sleep2demo','sleep2sleep','sleep2good','sleep2bad'])
+    # const required from StateBase
+    STATE_NAME = 'SLEEP'
+    EDGE_NAME = STATE_NAME.lower() # TODO disconnect from command 
 
-    def execute(self, userdata):
-        rospy.loginfo('Executing state SLEEP')
-        transition = self.switch_state();
-        if transition == "": # time out
-            return 'sleep2demo'
-        else:
-            return 'sleep2' + transition
+
+    # function required by the StateBase class interface (called during machine building)
+    def get_outcomes(self):
+        return [ self.transition_to( self.EDGE_NAME), # 'sleep2sleep'
+                 self.transition_to( Demo.EDGE_NAME), # 'sleep2demo'
+                 self.transition_to( Bad.EDGE_NAME), # 'sleep2bad'
+                 self.transition_to( Good.EDGE_NAME) # 'sleep2good'
+               ]
+
+    # function required by the StateBase class interface (called during machine building)
+    def get_transitions(self):
+        return { self.transition_to( self.EDGE_NAME) : self.STATE_NAME, # 'sleep2sleep':'SLEEP',
+                 self.transition_to( Demo.EDGE_NAME) : Demo.STATE_NAME, #'sleep2demo':'DEMO',
+                 self.transition_to( Good.EDGE_NAME) : Good.STATE_NAME, # 'sleep2good':'GOOD',
+                 self.transition_to( Bad.EDGE_NAME) : Bad.STATE_NAME #'sleep2bad':'BAD' 
+               }
+
+    # function required by the StateBase class interface
+    def start_command(self):
+	print('Run command implementation SLEEEEP')
+
+    # function required by the StateBase class interface
+    def stop_command(self):
+	print('Stop command implementation SLEEEEP')
             
 
 # main
@@ -141,13 +250,19 @@ def main():
     # Create a SMACH state machine
     sm = smach.StateMachine(outcomes=[])
 
+    # construct all states
+    states = []
+    states.append(Demo(listener))
+    states.append(Good(listener))
+    states.append(Bad(listener))
+    states.append(Sleep(listener))
+
     # Open the container
     with sm:
         # Add states to the container
-        smach.StateMachine.add('DEMO', Demo(listener), transitions={'demo2demo':'DEMO','demo2good':'GOOD','demo2bad':'BAD','demo2sleep':'SLEEP'})
-        smach.StateMachine.add('GOOD', Good(listener), transitions={'good2good':'GOOD','good2demo':'DEMO','good2bad':'BAD','good2sleep':'SLEEP'})
-        smach.StateMachine.add('BAD', Bad(listener), transitions={'bad2bad':'BAD','bad2demo':'DEMO','bad2good':'GOOD','bad2sleep':'SLEEP'})        
-	smach.StateMachine.add('SLEEP', Sleep(listener), transitions={'sleep2sleep':'SLEEP','sleep2demo':'DEMO','sleep2good':'GOOD','sleep2bad':'BAD'})        
+        for i in range(len(states)):
+            st = states[i]
+            smach.StateMachine.add(st.STATE_NAME, st, st.get_transitions())
     
     # Configuration to show the finite state machine with `rosrun smach_viewer smach_viewer.py `
     sis = smach_ros.IntrospectionServer('miro_state_command', sm, '/MIRO_STATES')
