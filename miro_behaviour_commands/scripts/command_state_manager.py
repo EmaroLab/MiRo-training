@@ -81,6 +81,8 @@ class StateBase(smach.State):
                 return Bad.EDGE_NAME
             elif command == 'sleep':
                 return Sleep.EDGE_NAME
+            elif command == 'play':
+                return Play.EDGE_NAME
             #else:
             #    print("Command not understood " + command)
         print("TIME_OUT")
@@ -88,7 +90,7 @@ class StateBase(smach.State):
 
     # smach interface
     def execute(self, userdata):
-        rospy.loginfo('Executing state ' + str(self.STATE_NAME))
+#        rospy.loginfo('Executing state ' + str(self.STATE_NAME))
         self.start_command() # start behaviour to implement
         user_command = self.wat_and_transit(); # check for user command or time out
         transition = self.transition_to(Demo.EDGE_NAME) # initialise time out transition
@@ -108,17 +110,17 @@ class StateBase(smach.State):
 
     # required interfaces for the derived classes (executed when entering in a state)
     def start_command(self):
-	print('Run command, to be implemented in derived classes')
+	rospy.loginfo('Run command, to be implemented in derived classes')
 
     def stop_command(self):
-	print('Stop command, to be implemented in derived classes')
+	rospy.loginfo('Stop command, to be implemented in derived classes')
 
     # required interfaces for the derived classes (called on constructor, those should return constants) (called during machine building)
     def get_outcomes(self):
-	print('Machine outcomes set-up, to be implemented in derived classes')
+	rospy.loginfo('Machine outcomes set-up, to be implemented in derived classes')
 
     def get_transitions(self):
-	print('Machine transition set-up, to be implemented in derived classes')
+	rospy.loginfo('Machine transition set-up, to be implemented in derived classes')
 
 # define state Demo
 class Demo(StateBase):
@@ -131,7 +133,8 @@ class Demo(StateBase):
         return [ self.transition_to( self.EDGE_NAME), # 'demo2demo'
                  self.transition_to( Good.EDGE_NAME), # 'demo2good'
                  self.transition_to( Bad.EDGE_NAME), # 'demo2bad'
-                 self.transition_to( Sleep.EDGE_NAME) # 'demo2sleep'
+                 self.transition_to( Sleep.EDGE_NAME), # 'demo2sleep'
+                 self.transition_to( Play.EDGE_NAME)
                ]
 
     # function required by the StateBase class interface (called during machine building)
@@ -139,7 +142,8 @@ class Demo(StateBase):
         return { self.transition_to( self.EDGE_NAME) : self.STATE_NAME, # 'demo2demo':'DEMO',
                  self.transition_to( Good.EDGE_NAME) : Good.STATE_NAME, #'demo2good':'GOOD',
                  self.transition_to( Bad.EDGE_NAME) : Bad.STATE_NAME, # 'demo2bad':'BAD',
-                 self.transition_to( Sleep.EDGE_NAME) : Sleep.STATE_NAME #'demo2sleep':'SLEEP' 
+                 self.transition_to( Sleep.EDGE_NAME) : Sleep.STATE_NAME, #'demo2sleep':'SLEEP'
+                 self.transition_to( Play.EDGE_NAME) : Play.STATE_NAME 
                }
 
     # function required by the StateBase class interface
@@ -161,7 +165,8 @@ class Good(StateBase):
         return [ self.transition_to( self.EDGE_NAME), # 'good2good'
                  self.transition_to( Demo.EDGE_NAME), # 'good2demo'
                  self.transition_to( Bad.EDGE_NAME), # 'good2bad'
-                 self.transition_to( Sleep.EDGE_NAME) # 'good2sleep'
+                 self.transition_to( Sleep.EDGE_NAME), # 'good2sleep'
+                 self.transition_to( Play.EDGE_NAME)
                ]
 
     # function required by the StateBase class interface (called during machine building)
@@ -169,16 +174,17 @@ class Good(StateBase):
         return { self.transition_to( self.EDGE_NAME) : self.STATE_NAME, # 'good2good':'GOOD',
                  self.transition_to( Demo.EDGE_NAME) : Demo.STATE_NAME, #'good2demo':'DEMO',
                  self.transition_to( Bad.EDGE_NAME) : Bad.STATE_NAME, # 'good2bad':'BAD',
-                 self.transition_to( Sleep.EDGE_NAME) : Sleep.STATE_NAME #'good2bad':'SLEEP' 
+                 self.transition_to( Sleep.EDGE_NAME) : Sleep.STATE_NAME, #'good2bad':'SLEEP' 
+                 self.transition_to( Play.EDGE_NAME) : Play.STATE_NAME
                }
 
     # function required by the StateBase class interface
     def start_command(self):
-	print('Run command implementation GOOOD')
+	rospy.loginfo('Run command implementation GOOOD')
 
     # function required by the StateBase class interface
     def stop_command(self):
-	print('Stop command implementation GOOOD')
+	rospy.loginfo('Stop command implementation GOOOD')
         
 # define state Bad
 class Bad(StateBase):
@@ -191,7 +197,8 @@ class Bad(StateBase):
         return [ self.transition_to( self.EDGE_NAME), # 'bad2bad'
                  self.transition_to( Demo.EDGE_NAME), # 'bad2demo'
                  self.transition_to( Good.EDGE_NAME), # 'bad2good'
-                 self.transition_to( Sleep.EDGE_NAME) # 'bad2sleep'
+                 self.transition_to( Sleep.EDGE_NAME), # 'bad2sleep'
+                 self.transition_to( Play.EDGE_NAME)
                ]
 
     # function required by the StateBase class interface (called during machine building)
@@ -199,16 +206,17 @@ class Bad(StateBase):
         return { self.transition_to( self.EDGE_NAME) : self.STATE_NAME, # 'bad2bad':'BAD',
                  self.transition_to( Demo.EDGE_NAME) : Demo.STATE_NAME, #'bad2demo':'DEMO',
                  self.transition_to( Good.EDGE_NAME) : Good.STATE_NAME, # 'bad2good':'GOOD',
-                 self.transition_to( Sleep.EDGE_NAME) : Sleep.STATE_NAME #'bad2sleep':'SLEEP' 
+                 self.transition_to( Sleep.EDGE_NAME) : Sleep.STATE_NAME, #'bad2sleep':'SLEEP' 
+                 self.transition_to( Play.EDGE_NAME) : Play.STATE_NAME
                }
 
     # function required by the StateBase class interface
     def start_command(self):
-	print('Run command implementation BAAD')
+	rospy.loginfo('Run command implementation BAAD')
 
     # function required by the StateBase class interface
     def stop_command(self):
-	print('Stop command implementation BAAD') 
+	rospy.loginfo('Stop command implementation BAAD') 
 
 # define state Sleep
 class Sleep(StateBase):
@@ -222,7 +230,8 @@ class Sleep(StateBase):
         return [ self.transition_to( self.EDGE_NAME), # 'sleep2sleep'
                  self.transition_to( Demo.EDGE_NAME), # 'sleep2demo'
                  self.transition_to( Bad.EDGE_NAME), # 'sleep2bad'
-                 self.transition_to( Good.EDGE_NAME) # 'sleep2good'
+                 self.transition_to( Good.EDGE_NAME), # 'sleep2good'
+                 self.transition_to( Play.EDGE_NAME) 
                ]
 
     # function required by the StateBase class interface (called during machine building)
@@ -230,17 +239,52 @@ class Sleep(StateBase):
         return { self.transition_to( self.EDGE_NAME) : self.STATE_NAME, # 'sleep2sleep':'SLEEP',
                  self.transition_to( Demo.EDGE_NAME) : Demo.STATE_NAME, #'sleep2demo':'DEMO',
                  self.transition_to( Good.EDGE_NAME) : Good.STATE_NAME, # 'sleep2good':'GOOD',
-                 self.transition_to( Bad.EDGE_NAME) : Bad.STATE_NAME #'sleep2bad':'BAD' 
+                 self.transition_to( Bad.EDGE_NAME) : Bad.STATE_NAME, #'sleep2bad':'BAD'
+                 self.transition_to( Play.EDGE_NAME) : Play.STATE_NAME 
                }
 
     # function required by the StateBase class interface
     def start_command(self):
-	print('Run command implementation SLEEEEP')
+	rospy.loginfo('Run command implementation SLEEEEP')
 
     # function required by the StateBase class interface
     def stop_command(self):
-	print('Stop command implementation SLEEEEP')
+	rospy.loginfo('Stop command implementation SLEEEEP')
             
+
+# define state Sleep
+class Play(StateBase):
+    # const required from StateBase
+    STATE_NAME = 'PLAY'
+    EDGE_NAME = STATE_NAME.lower() # TODO disconnect from command 
+
+
+    # function required by the StateBase class interface (called during machine building)
+    def get_outcomes(self):
+        return [ self.transition_to( self.EDGE_NAME), # 'play2play'
+                 self.transition_to( Demo.EDGE_NAME), # 'play2demo'
+                 self.transition_to( Bad.EDGE_NAME), # 'play2bad'
+                 self.transition_to( Good.EDGE_NAME), # 'play2good'
+                 self.transition_to( Sleep.EDGE_NAME) 
+               ]
+
+    # function required by the StateBase class interface (called during machine building)
+    def get_transitions(self):
+        return { self.transition_to( self.EDGE_NAME) : self.STATE_NAME, # 'play2play':'PLAY',
+                 self.transition_to( Demo.EDGE_NAME) : Demo.STATE_NAME, #'play2demo':'DEMO',
+                 self.transition_to( Good.EDGE_NAME) : Good.STATE_NAME, # 'play2good':'GOOD',
+                 self.transition_to( Bad.EDGE_NAME) : Bad.STATE_NAME, #'play2bad':'BAD' 
+                 self.transition_to( Sleep.EDGE_NAME) : Sleep.STATE_NAME 
+               }
+
+    # function required by the StateBase class interface
+    def start_command(self):
+	rospy.loginfo('Run command implementation PLAAAY')
+
+    # function required by the StateBase class interface
+    def stop_command(self):
+	rospy.loginfo('Stop command implementation PLAAAY')
+
 
 # main
 listener = CommandListener()
@@ -256,6 +300,7 @@ def main():
     states.append(Good(listener))
     states.append(Bad(listener))
     states.append(Sleep(listener))
+    states.append(Play(listener))
 
     # Open the container
     with sm:
