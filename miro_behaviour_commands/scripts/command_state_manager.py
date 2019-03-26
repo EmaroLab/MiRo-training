@@ -3,12 +3,15 @@
 import rospy
 import smach
 import smach_ros
+from std_msgs.msg import Bool
 
 import time
 from threading import Thread, Lock
 
 import signal
 import sys
+
+import speech_recognition as sr # requires `pip install SpeechRecognition` and `PyAudio 0.2.11`
 
 ## \file command_state_manager.py
 ## \brief This script implements a finite state machine to manage the Miro's behaviour. 
@@ -23,15 +26,36 @@ class CommandListener:
         self.mutex = Lock()
         self.command_thread.start()        
 
+#   # example for listening trhough keyboard
+#    def listening(self):
+#        while( not self.kill):
+#            user_text = raw_input("Enter something:")
+#            print("You entered:" + str(user_text))
+#            self.mutex.acquire()
+#            try:
+#                self.command = user_text
+#            finally:
+#                self.mutex.release()                
+
+    # listing from microphone 
     def listening(self):
         while( not self.kill):
-            user_text = raw_input("Enter something:")
-            print("You entered:" + str(user_text))
-            self.mutex.acquire()
-            try:
-                self.command = user_text
-            finally:
-                self.mutex.release()                
+            r = sr.Recognizer()                 # initialize recognizer
+            with sr.Microphone() as source:     # mention source it will be either Microphone or audio files.
+                rospy.loginfo("Miro is listening :")
+                audio = r.listen(source)        # listen to the source
+                rospy.loginfo("Miro is busy")
+                try:
+                    text = r.recognize_google(audio)    # use recognizer to convert our audio into text part.
+                    rospy.loginfo("You said: " + text)#format(text))
+                    sep=text.split()       
+                except:
+                    rospy.loginfo("Sorry could not recognize your voice")
+            #self.mutex.acquire()
+            #try:
+            #    self.command = user_text
+            #finally:
+            #    self.mutex.release()    
     
     def terminate(self):
         self.kill = True
@@ -56,15 +80,16 @@ class StateBase(smach.State):
     REACTIVE = True # if FALSE it waits before to send command
     DELAY_COMMAND = 2 # in seconds
     TRANSITION_TO_FROM = '2' # as string from meaning 'to' in the transition anme
+    BASE_PUBLISHING_PATH = '/miro_state_controller/'
   
     # derived class must contain constants
     # STATE_NAME
     # EDGE_NAME (the name x (not capitalised))
 
     def __init__(self,listener):
-#        self.edge_name = self.STATE_NAME.lower()  # the name x (not capitalised)
         self.listener = listener 
         smach.State.__init__(self, outcomes=self.get_outcomes())
+        self.publisher = rospy.Publisher( self.BASE_PUBLISHING_PATH + self.EDGE_NAME, Bool, queue_size=0)
 
     # it must retyrb the transiction sub-name X for `self.transition_to + X`
     def wat_and_transit(self):      
@@ -108,19 +133,27 @@ class StateBase(smach.State):
     def transition_from(self,from_edge_name): 
         return from_edge_name + TRANSITION_TO_FROM + self.EDGE_NAME # e.g., edge_name2x
 
-    # required interfaces for the derived classes (executed when entering in a state)
     def start_command(self):
-	rospy.loginfo('Run command, to be implemented in derived classes')
+	    rospy.loginfo('Start command implementation ' + self.STATE_NAME)
+	    self.publisher.publish(True)
 
     def stop_command(self):
-	rospy.loginfo('Stop command, to be implemented in derived classes')
+	    rospy.loginfo('Stop command implementation ' + self.STATE_NAME)
+	    self.publisher.publish(False)
 
     # required interfaces for the derived classes (called on constructor, those should return constants) (called during machine building)
     def get_outcomes(self):
-	rospy.loginfo('Machine outcomes set-up, to be implemented in derived classes')
+        rospy.loginfo('Machine outcomes set-up, to be implemented in derived classes')
 
     def get_transitions(self):
-	rospy.loginfo('Machine transition set-up, to be implemented in derived classes')
+        rospy.loginfo('Machine transition set-up, to be implemented in derived classes')
+        
+    def get_transitions(self):
+        rospy.loginfo('return the name of the activation/disactivation topic')
+
+    def get_activation_topic_name(self):
+        rospy.loginfo('return the name of the topic for activating bheaviour, to be implemented')
+
 
 # define state Demo
 class Demo(StateBase):
@@ -146,14 +179,6 @@ class Demo(StateBase):
                  self.transition_to( Play.EDGE_NAME) : Play.STATE_NAME 
                }
 
-    # function required by the StateBase class interface
-    def start_command(self):
-	print('Run command implementation DEEMO')
-
-    # function required by the StateBase class interface
-    def stop_command(self):
-	print('Stop command implementation DEEMO')
-
 # define state Good
 class Good(StateBase):
     # const required from StateBase
@@ -178,14 +203,6 @@ class Good(StateBase):
                  self.transition_to( Play.EDGE_NAME) : Play.STATE_NAME
                }
 
-    # function required by the StateBase class interface
-    def start_command(self):
-	rospy.loginfo('Run command implementation GOOOD')
-
-    # function required by the StateBase class interface
-    def stop_command(self):
-	rospy.loginfo('Stop command implementation GOOOD')
-        
 # define state Bad
 class Bad(StateBase):
     # const required from StateBase
@@ -209,14 +226,6 @@ class Bad(StateBase):
                  self.transition_to( Sleep.EDGE_NAME) : Sleep.STATE_NAME, #'bad2sleep':'SLEEP' 
                  self.transition_to( Play.EDGE_NAME) : Play.STATE_NAME
                }
-
-    # function required by the StateBase class interface
-    def start_command(self):
-	rospy.loginfo('Run command implementation BAAD')
-
-    # function required by the StateBase class interface
-    def stop_command(self):
-	rospy.loginfo('Stop command implementation BAAD') 
 
 # define state Sleep
 class Sleep(StateBase):
@@ -242,14 +251,6 @@ class Sleep(StateBase):
                  self.transition_to( Bad.EDGE_NAME) : Bad.STATE_NAME, #'sleep2bad':'BAD'
                  self.transition_to( Play.EDGE_NAME) : Play.STATE_NAME 
                }
-
-    # function required by the StateBase class interface
-    def start_command(self):
-	rospy.loginfo('Run command implementation SLEEEEP')
-
-    # function required by the StateBase class interface
-    def stop_command(self):
-	rospy.loginfo('Stop command implementation SLEEEEP')
             
 
 # define state Sleep
@@ -276,14 +277,6 @@ class Play(StateBase):
                  self.transition_to( Bad.EDGE_NAME) : Bad.STATE_NAME, #'play2bad':'BAD' 
                  self.transition_to( Sleep.EDGE_NAME) : Sleep.STATE_NAME 
                }
-
-    # function required by the StateBase class interface
-    def start_command(self):
-	rospy.loginfo('Run command implementation PLAAAY')
-
-    # function required by the StateBase class interface
-    def stop_command(self):
-	rospy.loginfo('Stop command implementation PLAAAY')
 
 
 # main

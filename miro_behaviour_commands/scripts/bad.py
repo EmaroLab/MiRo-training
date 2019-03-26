@@ -3,6 +3,7 @@
 ################################################################
 
 import rospy
+from std_msgs.msg import Bool
 from std_msgs.msg import String
 from sensor_msgs.msg import Image,CompressedImage,Range,Imu
 from geometry_msgs.msg import Twist,Pose
@@ -27,23 +28,24 @@ from datetime import datetime
 ## @n The Robot moves down its head and inclines it. It turns its back to the user and change its light pattern from Blue to Red.
 ##
 
-## \brief The class SadMode implements a robot sad behaviour
+## \brief The class BadMode implements a robot bad behaviour
 
-class SadMode():
+class BadMode():
+    NODE_RATE = 200
+
     ## Constructor
-    def __init__(self):
-        ## Node rate
-        self.rate = rospy.get_param('rate',NODE_RATE)
-        
-        ## Publisher to the topic /miro_sad a message of type platform_control which corresponds to the "Bad" action.
-        self.pub_platform_control = rospy.Publisher('/miro_sad',platform_control,queue_size=0)
-
-        rospy.Subscriber("chatter", String, callback)
+    def __init__(self):        
+        ## Publisher to the topic /miro_bad a message of type platform_control which corresponds to the "Bad" action.
+        self.pub_platform_control = rospy.Publisher('/miro_bad',platform_control,queue_size=0)
+        rospy.Subscriber("//miro_state_controller/bad", Bool, state_controller_callback)
+    
+    def callback(state_controller_callback):
+        rospy.loginfo(rospy.get_caller_id() + "I heard %s", data.data)
     
     ## Function that sets the parameters of the structure platform_control corresponding to action "Bad".
-    def miro_sad(self):
+    def miro_bad(self):
 
-        r = rospy.Rate(self.rate)
+        r = rospy.Rate(self.NODE_RATE)
         q = platform_control()
 
         while not rospy.is_shutdown():
@@ -61,5 +63,5 @@ class SadMode():
 
 if __name__== '__main__':
     rospy.init_node('bad')
-    sad = SadMode()
-    sad.miro_sad()
+    bad = BadMode()
+    bad.miro_bad()
