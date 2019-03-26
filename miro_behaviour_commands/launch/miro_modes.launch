@@ -8,7 +8,7 @@
 -->
 
 <!-- STATE MACHINE WITH SPEECH BASED TRANSITIONS -->
-<node name="miro_bheaviour_state_machine" pkg="miro_behaviour_commands" type="command_state_manager.py" output="screen"/> 
+<node name="miro_bheaviour_state_machine" pkg="miro_behaviour_commands" type="command_state_machine.py" output="screen"/> 
 
 <!-- MIRO STATES IMPLEMENTATIONS -->
 <node name="sleep" pkg="miro_behaviour_commands" type="sleep.py" args="robot:=$(arg MIRO_NAME)" output="screen"/> 
