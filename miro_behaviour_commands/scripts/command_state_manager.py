@@ -11,7 +11,7 @@ from threading import Thread, Lock
 import signal
 import sys
 
-import speech_recognition as sr # requires `pip install SpeechRecognition` and `PyAudio 0.2.11`
+#import speech_recognition as sr # requires `pip install SpeechRecognition` and `PyAudio 0.2.11`
 
 ## \file command_state_manager.py
 ## \brief This script implements a finite state machine to manage the Miro's behaviour. 
@@ -26,36 +26,36 @@ class CommandListener:
         self.mutex = Lock()
         self.command_thread.start()        
 
-#   # example for listening trhough keyboard
-#    def listening(self):
-#        while( not self.kill):
-#            user_text = raw_input("Enter something:")
-#            print("You entered:" + str(user_text))
-#            self.mutex.acquire()
-#            try:
-#                self.command = user_text
-#            finally:
-#                self.mutex.release()                
-
-    # listing from microphone 
+   # example for listening trhough keyboard
     def listening(self):
         while( not self.kill):
-            r = sr.Recognizer()                 # initialize recognizer
-            with sr.Microphone() as source:     # mention source it will be either Microphone or audio files.
-                rospy.loginfo("Miro is listening :")
-                audio = r.listen(source)        # listen to the source
-                rospy.loginfo("Miro is busy")
-                try:
-                    text = r.recognize_google(audio)    # use recognizer to convert our audio into text part.
-                    rospy.loginfo("You said: " + text)#format(text))
-                    sep=text.split()       
-                except:
-                    rospy.loginfo("Sorry could not recognize your voice")
-            #self.mutex.acquire()
-            #try:
-            #    self.command = user_text
-            #finally:
-            #    self.mutex.release()    
+            user_text = raw_input("Enter something:")
+            print("You entered:" + str(user_text))
+            self.mutex.acquire()
+            try:
+                self.command = user_text
+            finally:
+                self.mutex.release()                
+
+    # listing from microphone 
+#    def listening(self):
+#        while( not self.kill):
+#            r = sr.Recognizer()                 # initialize recognizer
+#            with sr.Microphone() as source:     # mention source it will be either Microphone or audio files.
+#                rospy.loginfo("Miro is listening :")
+#                audio = r.listen(source)        # listen to the source
+#                rospy.loginfo("Miro is busy")
+#                try:
+#                    text = r.recognize_google(audio)    # use recognizer to convert our audio into text part.
+#                    rospy.loginfo("You said: " + text)#format(text))
+#                    sep=text.split()       
+#                except:
+#                    rospy.loginfo("Sorry could not recognize your voice")
+#            #self.mutex.acquire()
+#            #try:
+#             #    self.command = user_text
+#            #finally:
+#            #    self.mutex.release()    
     
     def terminate(self):
         self.kill = True
@@ -87,9 +87,12 @@ class StateBase(smach.State):
     # EDGE_NAME (the name x (not capitalised))
 
     def __init__(self,listener):
+        # set state machine
         self.listener = listener 
         smach.State.__init__(self, outcomes=self.get_outcomes())
-        self.publisher = rospy.Publisher( self.BASE_PUBLISHING_PATH + self.EDGE_NAME, Bool, queue_size=0)
+        # set boolean publisher to activation ROS node
+        self.activation_topic_name = self.BASE_PUBLISHING_PATH + self.EDGE_NAME
+        self.publisher = rospy.Publisher( self.activation_topic_name, Bool, queue_size=0)
 
     # it must retyrb the transiction sub-name X for `self.transition_to + X`
     def wat_and_transit(self):      
@@ -110,7 +113,7 @@ class StateBase(smach.State):
                 return Play.EDGE_NAME
             #else:
             #    print("Command not understood " + command)
-        print("TIME_OUT")
+        rospy.loginfo("TIME_OUT")
         return ""
 
     # smach interface
@@ -133,12 +136,14 @@ class StateBase(smach.State):
     def transition_from(self,from_edge_name): 
         return from_edge_name + TRANSITION_TO_FROM + self.EDGE_NAME # e.g., edge_name2x
 
+    # automatically subscribe TRUE to related state ROS node in the topic `self.BASE_PUBLISHING_PATH + self.EDGE_NAME`
     def start_command(self):
-	    rospy.loginfo('Start command implementation ' + self.STATE_NAME)
+	    rospy.loginfo('Start command implementation ' + self.STATE_NAME + ' implemented on topic ' + self.activation_topic_name)
 	    self.publisher.publish(True)
 
+    # automatically subscribe FALSE to related state ROS node in the topic `self.BASE_PUBLISHING_PATH + self.EDGE_NAME`
     def stop_command(self):
-	    rospy.loginfo('Stop command implementation ' + self.STATE_NAME)
+	    rospy.loginfo('Stop command implementation ' + self.STATE_NAME + ' implemented on topic ' + self.activation_topic_name)
 	    self.publisher.publish(False)
 
     # required interfaces for the derived classes (called on constructor, those should return constants) (called during machine building)
@@ -159,7 +164,7 @@ class StateBase(smach.State):
 class Demo(StateBase):
     # const required from StateBase
     STATE_NAME = 'DEMO'
-    EDGE_NAME = STATE_NAME.lower() # TODO disconnect from command 
+    EDGE_NAME = STATE_NAME.lower()
 
     # function required by the StateBase class interface (called during machine building)
     def get_outcomes(self):
@@ -183,7 +188,7 @@ class Demo(StateBase):
 class Good(StateBase):
     # const required from StateBase
     STATE_NAME = 'GOOD'
-    EDGE_NAME = STATE_NAME.lower() # TODO disconnect from command 
+    EDGE_NAME = STATE_NAME.lower()
 
     # function required by the StateBase class interface (called during machine building)
     def get_outcomes(self):
@@ -207,7 +212,7 @@ class Good(StateBase):
 class Bad(StateBase):
     # const required from StateBase
     STATE_NAME = 'BAD'
-    EDGE_NAME = STATE_NAME.lower() # TODO disconnect from command 
+    EDGE_NAME = STATE_NAME.lower()
 
     # function required by the StateBase class interface (called during machine building)
     def get_outcomes(self):
@@ -231,7 +236,7 @@ class Bad(StateBase):
 class Sleep(StateBase):
     # const required from StateBase
     STATE_NAME = 'SLEEP'
-    EDGE_NAME = STATE_NAME.lower() # TODO disconnect from command 
+    EDGE_NAME = STATE_NAME.lower()
 
 
     # function required by the StateBase class interface (called during machine building)
@@ -257,7 +262,7 @@ class Sleep(StateBase):
 class Play(StateBase):
     # const required from StateBase
     STATE_NAME = 'PLAY'
-    EDGE_NAME = STATE_NAME.lower() # TODO disconnect from command 
+    EDGE_NAME = STATE_NAME.lower()
 
 
     # function required by the StateBase class interface (called during machine building)
@@ -281,8 +286,8 @@ class Play(StateBase):
 
 # main
 listener = CommandListener()
-def main():
-    rospy.init_node('smach_example_state_machine')
+def state_machine_setup():
+    rospy.init_node('miro_bheaviour_state_machine')
       
     # Create a SMACH state machine
     sm = smach.StateMachine(outcomes=[])
@@ -322,4 +327,4 @@ def signal_handler(sig, frame):
 
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, signal_handler)
-    main()
+    state_machine_setup()

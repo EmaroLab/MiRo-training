@@ -1,0 +1,19 @@
+<launch>
+
+<!-- MIRO DEMOS CONTROLLED TROUGH ROS PARAMETERS -->
+<arg name="MIRO_NAME" value="rob01" /> <!-- rob01 or sim01 -->
+<!--
+<arg name="GUI_FILE" value="$(find miro_behaviour_config)/script/miro_ros_client_gui.glade" />
+<node name="miro_behaviour_controller" pkg="miro_behaviour_config" type="miro_behaviour_controller.py" args="robot:=$(arg MIRO_NAME) gui_template:=$(arg GUI_FILE)" output="screen"/> 
+-->
+
+<!-- STATE MACHINE WITH SPEECH BASED TRANSITIONS -->
+<node name="miro_bheaviour_state_machine" pkg="miro_behaviour_commands" type="command_state_manager.py" output="screen"/> 
+
+<!-- MIRO STATES IMPLEMENTATIONS -->
+<node name="sleep" pkg="miro_behaviour_commands" type="sleep.py" args="robot:=$(arg MIRO_NAME)" output="screen"/> 
+<node name="bad"   pkg="miro_behaviour_commands" type="bad.py"   args="robot:=$(arg MIRO_NAME)" output="screen"/> 
+<node name="good"  pkg="miro_behaviour_commands" type="good.py"  args="robot:=$(arg MIRO_NAME)" output="screen"/>
+<!-- <node name ="play" pkg="miro_behaviour_commands" type="play.py" args="robot:=$(arg MIRO_NAME)" output="screen"/> --> 
+
+</launch>
